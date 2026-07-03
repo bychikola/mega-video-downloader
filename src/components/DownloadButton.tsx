@@ -5,7 +5,6 @@ import { Download, X } from "lucide-react";
 interface DownloadButtonProps {
   size: string;
   onClick: () => void;
-  /** Progress data from SSE */
   progress: {
     percent: number;
     speed: string | null;
@@ -13,6 +12,7 @@ interface DownloadButtonProps {
     totalSize: string | null;
     done?: boolean;
     error?: string | null;
+    phase?: "download" | "save";
   } | null;
   isLoading: boolean;
 }
@@ -23,7 +23,7 @@ export default function DownloadButton({
   progress,
   isLoading,
 }: DownloadButtonProps) {
-  // Idle state — show download button
+  // Idle state
   if (!isLoading && !progress) {
     return (
       <button
@@ -45,40 +45,48 @@ export default function DownloadButton({
     );
   }
 
-  // Downloading / progress state
+  const isSave = progress?.phase === "save";
+  const barColor = isSave ? "bg-green-500" : "bg-red-500";
+  const label = isSave ? "Saving to device..." : "Downloading from YouTube...";
+
   return (
     <div className="w-full max-w-2xl mx-auto space-y-3">
       {/* Progress bar */}
       <div className="w-full bg-[#151619] border border-white/5 p-4">
-        {/* Top row: percent + speed */}
+        {/* Label */}
+        <p className="text-xs text-[#5D5C59] mb-2 font-sans">{label}</p>
+
+        {/* Percent + stats */}
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-mono text-[#F0EFEA] tabular-nums">
-            {progress ? `${Math.round(progress.percent)}%` : "Preparing..."}
+          <span className="text-lg font-mono text-[#F0EFEA] tabular-nums font-semibold">
+            {progress ? `${Math.round(progress.percent)}%` : "..."}
           </span>
           <div className="flex items-center gap-4 text-xs font-mono text-[#5D5C59] tabular-nums">
             {progress?.speed && <span>{progress.speed}</span>}
-            {progress?.eta && !progress.done && <span>ETA {progress.eta}</span>}
+            {!isSave && progress?.eta && !progress?.done && (
+              <span>ETA {progress.eta}</span>
+            )}
             {progress?.totalSize && <span>{progress.totalSize}</span>}
           </div>
         </div>
 
         {/* Bar track */}
-        <div className="w-full h-1.5 bg-[#0B0C0E] overflow-hidden">
+        <div className="w-full h-2 bg-[#0B0C0E] overflow-hidden">
           <div
-            className="h-full bg-red-500 transition-all duration-300 ease-out"
-            style={{ width: `${progress?.percent || 0}%` }}
+            className={`h-full ${barColor} transition-all duration-300 ease-out`}
+            style={{ width: `${Math.min(progress?.percent || 0, 100)}%` }}
           />
         </div>
       </div>
 
-      {/* Cancel hint */}
+      {/* Hint */}
       {!progress?.done && !progress?.error && (
-        <p className="text-xs text-[#5D5C59] text-center">
-          Downloading... do not close this page
+        <p className="text-xs text-[#5D5C59] text-center font-sans">
+          Do not close this page
         </p>
       )}
 
-      {/* Error state */}
+      {/* Error */}
       {progress?.error && (
         <div className="flex items-center gap-2 justify-center">
           <X size={14} className="text-red-400" />

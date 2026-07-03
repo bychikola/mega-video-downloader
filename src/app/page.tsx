@@ -20,6 +20,8 @@ interface DownloadProgress {
   error: string | null;
   fileUrl: string | null;
   fileName: string | null;
+  /** Distinguishes yt-dlp download vs browser save */
+  phase: "download" | "save";
 }
 
 /* ── State machine ────────────────────────────────── */
@@ -61,7 +63,8 @@ async function* parseSSE(
       if (line.startsWith("data: ")) {
         const json = line.slice(6);
         try {
-          const event = JSON.parse(json) as DownloadProgress;
+          const raw = JSON.parse(json) as DownloadProgress;
+          const event: DownloadProgress = { ...raw, phase: "download" };
           yield event;
           if (event.done || event.error) return;
         } catch {
@@ -210,9 +213,7 @@ export default function Home() {
           }
 
           if (event.done && event.fileUrl) {
-            // Step 3: Download complete — fetch the file
-            toast.success("Download complete! Saving file...");
-
+            // Step 3: Save file with progress tracking
             const fileRes = await fetch(event.fileUrl);
             if (!fileRes.ok) {
               toast.error("Failed to retrieve downloaded file.");
@@ -220,7 +221,46 @@ export default function Home() {
               return;
             }
 
-            const blob = await fileRes.blob();
+            const contentLength = parseInt(fileRes.headers.get("Content-Length") || "0", 10);
+            const fileReader = fileRes.body?.getReader();
+            if (!fileReader) {
+              toast.error("Failed to read file stream.");
+              setState(resultState(info, selectedFormat.ext, null));
+              return;
+            }
+
+            const chunks: Uint8Array[] = [];
+            let loaded = 0;
+
+            while (true) {
+              const chunk = await fileReader.read();
+              if (chunk.done) break;
+              if (aborted) return;
+
+              chunks.push(chunk.value);
+              loaded += chunk.value.length;
+
+              if (contentLength > 0) {
+                const pct = Math.round((loaded / contentLength) * 100);
+                const mbTotal = (contentLength / (1024 * 1024)).toFixed(1);
+                const mbLoaded = (loaded / (1024 * 1024)).toFixed(1);
+
+                setDownloadProgress({
+                  percent: pct,
+                  speed: `${mbLoaded} / ${mbTotal} MB`,
+                  eta: null,
+                  totalSize: `${mbTotal} MB`,
+                  done: false,
+                  error: null,
+                  fileUrl: null,
+                  fileName: null,
+                  phase: "save",
+                });
+              }
+            }
+
+            // Build blob and trigger download
+            const blob = new Blob(chunks as BlobPart[]);
             const downloadUrl = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = downloadUrl;
@@ -230,6 +270,7 @@ export default function Home() {
             document.body.removeChild(a);
             URL.revokeObjectURL(downloadUrl);
 
+            toast.success("Saved!");
             setState(resultState(info, selectedFormat.ext, null));
             return;
           }
