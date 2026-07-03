@@ -125,7 +125,7 @@ else
 fi
 
 log "Installing npm dependencies..."
-npm install --production
+npm install
 
 log "Building Next.js app..."
 npm run build
