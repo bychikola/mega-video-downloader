@@ -32,21 +32,12 @@ export default function DownloadButton({
           group relative flex items-center gap-3 px-8 py-4
           text-base font-semibold tracking-wide
           transition-all duration-300 ease-out
-          bg-red-500 hover:bg-red-600
-          text-[#F0EFEA]
-          active:scale-[0.97]
-          hover:shadow-[0_0_32px_rgba(239,68,68,0.3)]
-          w-full max-w-2xl mx-auto
-          justify-center
-          scale-up
+          bg-red-500 text-[#F0EFEA]
+          w-full max-w-2xl mx-auto justify-center
+          tap-bounce select-none scale-up
         "
       >
-        <Download
-          size={20}
-          className="transition-all duration-300 ease-out
-            group-hover:translate-y-0.5 group-hover:scale-110
-            group-active:translate-y-1"
-        />
+        <Download size={20} />
         <span>Download{size ? ` (${size})` : ""}</span>
       </button>
     );
@@ -111,7 +102,7 @@ export default function DownloadButton({
           <p className="text-xs text-red-400">{progress.error}</p>
           <button
             onClick={onClick}
-            className="text-xs text-red-400 underline hover:text-red-300 ml-2"
+            className="text-xs text-red-400 underline hover:text-red-300 ml-2 tap-bounce select-none"
           >
             Retry
           </button>

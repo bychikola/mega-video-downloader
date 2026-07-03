@@ -34,8 +34,7 @@ export default function VideoCard({
           src={thumbnail}
           alt={title}
           onError={fallbackThumbnail}
-          className="w-full h-full object-cover transition-all duration-700 ease-out
-            group-hover:scale-105 group-hover:brightness-50"
+          className="w-full h-full object-cover"
           loading="eager"
           referrerPolicy="no-referrer"
           style={{ opacity: 0, transition: 'opacity 0.5s ease-out' }}

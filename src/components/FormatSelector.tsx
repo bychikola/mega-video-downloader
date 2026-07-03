@@ -45,9 +45,10 @@ export default function FormatSelector({
               className={`
                 relative px-4 py-2 text-sm font-medium tracking-wide uppercase
                 transition-all duration-300 ease-out
+                tap-bounce select-none
                 ${isActive
                   ? "text-[#F0EFEA] bg-[#1D1E22]"
-                  : "text-[#5D5C59] hover:text-[#908F8C] bg-transparent hover:bg-white/[0.02]"
+                  : "text-[#5D5C59] hover:text-[#908F8C] bg-transparent"
                 }
               `}
             >
@@ -74,13 +75,14 @@ export default function FormatSelector({
               className={`
                 group relative p-4 text-left
                 border transition-all duration-300 ease-out
-                hover:-translate-y-0.5
+                tap-bounce select-none cursor-pointer
                 ${isSelected
-                  ? "border-red-500/50 bg-[#1D1E22] scale-up"
-                  : "border-white/5 bg-[#151619] hover:border-white/10 hover:bg-[#18191D] hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]"
+                  ? "border-red-500/50 bg-[#1D1E22]"
+                  : "border-white/5 bg-[#151619] hover:bg-[#18191D]"
                 }
                 ${isSelected ? "shadow-[0_0_24px_rgba(239,68,68,0.08)]" : ""}
               `}
+              style={isSelected ? { animation: 'select-pop 0.4s cubic-bezier(0.16, 1, 0.3, 1)' } : undefined}
             >
               {/* Glow effect for selected */}
               {isSelected && (

@@ -84,9 +84,9 @@ export default function VideoInput({ onSubmit, isLoading }: VideoInputProps) {
               shrink-0 flex items-center gap-2 px-4 py-2
               text-sm font-medium tracking-wide uppercase
               transition-all duration-300 ease-out
-              text-[#F0EFEA] bg-red-500 hover:bg-red-600
+              text-[#F0EFEA] bg-red-500
               disabled:opacity-15 disabled:cursor-not-allowed
-              active:scale-[0.96] hover:shadow-[0_0_24px_rgba(239,68,68,0.25)]
+              tap-bounce select-none
             "
           >
             {isLoading ? (
@@ -97,7 +97,7 @@ export default function VideoInput({ onSubmit, isLoading }: VideoInputProps) {
             ) : (
               <span className="flex items-center gap-2">
                 Get video
-                <ArrowRight size={16} className="transition-transform duration-300 ease-out group-hover:translate-x-0.5" />
+                <ArrowRight size={16} />
               </span>
             )}
           </button>
