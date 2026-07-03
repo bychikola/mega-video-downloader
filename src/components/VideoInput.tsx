@@ -40,17 +40,21 @@ export default function VideoInput({ onSubmit, isLoading }: VideoInputProps) {
         <div
           className={`
             flex items-center gap-3 px-5 py-4 rounded-none
-            border-b-2 transition-colors duration-200
-            bg-transparent
+            border-b-2 transition-all duration-300 ease-out
+            bg-transparent relative
+            after:absolute after:bottom-[-2px] after:left-0 after:right-0 after:h-[2px]
+            after:bg-red-500 after:origin-left
             ${showError
-              ? "border-red-500"
-              : "border-white/10 focus-within:border-red-500/70"
+              ? "border-red-500 after:scale-x-100"
+              : "border-white/10 focus-within:border-red-500/70 after:scale-x-0 focus-within:after:scale-x-100"
             }
+            after:transition-transform after:duration-400 after:ease-out
+            ${showError ? "animate-[shake_0.4s_ease-out]" : ""}
           `}
         >
           <Link2
             size={20}
-            className={`shrink-0 transition-colors duration-200 ${
+            className={`shrink-0 transition-all duration-300 ease-out ${
               showError ? "text-red-400" : "text-white/25 group-focus-within:text-red-400/80"
             }`}
           />
@@ -79,10 +83,10 @@ export default function VideoInput({ onSubmit, isLoading }: VideoInputProps) {
             className="
               shrink-0 flex items-center gap-2 px-4 py-2
               text-sm font-medium tracking-wide uppercase
-              transition-all duration-200
+              transition-all duration-300 ease-out
               text-[#F0EFEA] bg-red-500 hover:bg-red-600
               disabled:opacity-15 disabled:cursor-not-allowed
-              active:scale-95
+              active:scale-[0.96] hover:shadow-[0_0_24px_rgba(239,68,68,0.25)]
             "
           >
             {isLoading ? (
@@ -91,10 +95,10 @@ export default function VideoInput({ onSubmit, isLoading }: VideoInputProps) {
                 Fetching
               </span>
             ) : (
-              <>
+              <span className="flex items-center gap-2">
                 Get video
-                <ArrowRight size={16} />
-              </>
+                <ArrowRight size={16} className="transition-transform duration-300 ease-out group-hover:translate-x-0.5" />
+              </span>
             )}
           </button>
         </div>

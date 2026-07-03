@@ -27,17 +27,21 @@ export default function VideoCard({
   };
 
   return (
-    <div className="group relative overflow-hidden bg-[#151619] border border-white/5 w-full max-w-2xl mx-auto">
+    <div className="group relative overflow-hidden bg-[#151619] border border-white/5 w-full max-w-2xl mx-auto scale-up">
       {/* Thumbnail section */}
       <div className="relative aspect-video overflow-hidden bg-[#0B0C0E]">
         <img
           src={thumbnail}
           alt={title}
           onError={fallbackThumbnail}
-          className="w-full h-full object-cover transition-all duration-500
+          className="w-full h-full object-cover transition-all duration-700 ease-out
             group-hover:scale-105 group-hover:brightness-50"
           loading="eager"
           referrerPolicy="no-referrer"
+          style={{ opacity: 0, transition: 'opacity 0.5s ease-out' }}
+          onLoad={(e) => {
+            (e.target as HTMLImageElement).style.opacity = '1';
+          }}
         />
 
         {/* Hover overlay: YouTube link */}

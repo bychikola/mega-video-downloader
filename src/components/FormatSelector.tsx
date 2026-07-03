@@ -44,17 +44,17 @@ export default function FormatSelector({
               onClick={() => onExtChange(ext)}
               className={`
                 relative px-4 py-2 text-sm font-medium tracking-wide uppercase
-                transition-all duration-200
+                transition-all duration-300 ease-out
                 ${isActive
                   ? "text-[#F0EFEA] bg-[#1D1E22]"
-                  : "text-[#5D5C59] hover:text-[#908F8C] bg-transparent"
+                  : "text-[#5D5C59] hover:text-[#908F8C] bg-transparent hover:bg-white/[0.02]"
                 }
               `}
             >
               {info.label}
-              {/* Active indicator dot */}
+              {/* Active indicator: bottom bar instead of dot */}
               {isActive && (
-                <span className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-red-500" />
+                <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-red-500 animate-[border-expand_0.3s_ease-out]" />
               )}
             </button>
           );
@@ -62,7 +62,7 @@ export default function FormatSelector({
       </div>
 
       {/* Quality grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 stagger">
         {filteredFormats.map((format) => {
           const isSelected = selectedFormat?.id === format.id;
           const isAudio = !format.hasVideo && format.hasAudio;
@@ -73,10 +73,11 @@ export default function FormatSelector({
               onClick={() => onSelectFormat(format)}
               className={`
                 group relative p-4 text-left
-                border transition-all duration-200
+                border transition-all duration-300 ease-out
+                hover:-translate-y-0.5
                 ${isSelected
-                  ? "border-red-500/50 bg-[#1D1E22]"
-                  : "border-white/5 bg-[#151619] hover:border-white/10 hover:bg-[#18191D]"
+                  ? "border-red-500/50 bg-[#1D1E22] scale-up"
+                  : "border-white/5 bg-[#151619] hover:border-white/10 hover:bg-[#18191D] hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]"
                 }
                 ${isSelected ? "shadow-[0_0_24px_rgba(239,68,68,0.08)]" : ""}
               `}

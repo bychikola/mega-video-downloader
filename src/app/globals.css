@@ -83,9 +83,33 @@ body {
   to { transform: translateY(0); opacity: 1; }
 }
 
+@keyframes scale-up {
+  from { transform: scale(0.96); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+
+@keyframes border-expand {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
 .animate-in {
   animation-duration: 0.5s;
   animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .fade-in {
@@ -99,6 +123,20 @@ body {
 .slide-in-from-bottom-2 {
   animation-name: slide-in-from-bottom-2;
 }
+
+.scale-up {
+  animation-name: scale-up;
+  animation-duration: 0.4s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Stagger children: each child delays 60ms more than previous */
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 60ms; }
+.stagger > *:nth-child(3) { animation-delay: 120ms; }
+.stagger > *:nth-child(4) { animation-delay: 180ms; }
+.stagger > *:nth-child(5) { animation-delay: 240ms; }
+.stagger > *:nth-child(6) { animation-delay: 300ms; }
 
 /* ── Reduced motion ───────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {

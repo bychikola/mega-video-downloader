@@ -31,15 +31,22 @@ export default function DownloadButton({
         className="
           group relative flex items-center gap-3 px-8 py-4
           text-base font-semibold tracking-wide
-          transition-all duration-200
+          transition-all duration-300 ease-out
           bg-red-500 hover:bg-red-600
           text-[#F0EFEA]
-          active:scale-[0.98]
+          active:scale-[0.97]
+          hover:shadow-[0_0_32px_rgba(239,68,68,0.3)]
           w-full max-w-2xl mx-auto
           justify-center
+          scale-up
         "
       >
-        <Download size={20} className="transition-transform duration-300 group-hover:translate-y-0.5" />
+        <Download
+          size={20}
+          className="transition-all duration-300 ease-out
+            group-hover:translate-y-0.5 group-hover:scale-110
+            group-active:translate-y-1"
+        />
         <span>Download{size ? ` (${size})` : ""}</span>
       </button>
     );
@@ -73,9 +80,20 @@ export default function DownloadButton({
         {/* Bar track */}
         <div className="w-full h-2 bg-[#0B0C0E] overflow-hidden">
           <div
-            className={`h-full ${barColor} transition-all duration-300 ease-out`}
+            className={`h-full ${barColor} transition-all duration-500 ease-out relative overflow-hidden`}
             style={{ width: `${Math.min(progress?.percent || 0, 100)}%` }}
-          />
+          >
+            {/* Shimmer overlay while in progress */}
+            {!progress?.done && progress && progress.percent < 100 && (
+              <div className="absolute inset-0 opacity-30"
+                style={{
+                  backgroundImage: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)',
+                  backgroundSize: '200% 100%',
+                  animation: 'shimmer 1.5s ease-in-out infinite',
+                }}
+              />
+            )}
+          </div>
         </div>
       </div>
 
