@@ -34,7 +34,7 @@ export default function DownloadButton({
           transition-all duration-300 ease-out
           bg-red-500 text-[#F0EFEA]
           w-full max-w-2xl mx-auto justify-center
-          tap-bounce select-none scale-up
+          select-none scale-up
         "
       >
         <Download size={20} />
@@ -102,7 +102,7 @@ export default function DownloadButton({
           <p className="text-xs text-red-400">{progress.error}</p>
           <button
             onClick={onClick}
-            className="text-xs text-red-400 underline hover:text-red-300 ml-2 tap-bounce select-none"
+            className="text-xs text-red-400 underline hover:text-red-300 ml-2 select-none"
           >
             Retry
           </button>

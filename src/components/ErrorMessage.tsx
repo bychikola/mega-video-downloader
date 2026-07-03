@@ -27,7 +27,7 @@ export default function ErrorMessage({ message, onRetry }: ErrorMessageProps) {
             px-5 py-2 text-sm font-medium tracking-wide uppercase
             text-[#F0EFEA] bg-[#1D1E22] border border-white/10
             transition-all duration-300 ease-out
-            tap-bounce select-none
+            select-none
           "
         >
           Try again

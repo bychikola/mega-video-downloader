@@ -86,7 +86,7 @@ export default function VideoInput({ onSubmit, isLoading }: VideoInputProps) {
               transition-all duration-300 ease-out
               text-[#F0EFEA] bg-red-500
               disabled:opacity-15 disabled:cursor-not-allowed
-              tap-bounce select-none
+              select-none
             "
           >
             {isLoading ? (

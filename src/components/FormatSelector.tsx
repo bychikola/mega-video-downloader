@@ -45,7 +45,7 @@ export default function FormatSelector({
               className={`
                 relative px-4 py-2 text-sm font-medium tracking-wide uppercase
                 transition-all duration-300 ease-out
-                tap-bounce select-none
+                select-none
                 ${isActive
                   ? "text-[#F0EFEA] bg-[#1D1E22]"
                   : "text-[#5D5C59] hover:text-[#908F8C] bg-transparent"
@@ -82,7 +82,6 @@ export default function FormatSelector({
                 }
                 ${isSelected ? "shadow-[0_0_24px_rgba(239,68,68,0.08)]" : ""}
               `}
-              style={isSelected ? { animation: 'select-pop 0.4s cubic-bezier(0.16, 1, 0.3, 1)' } : undefined}
             >
               {/* Glow effect for selected */}
               {isSelected && (
