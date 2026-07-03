@@ -9,6 +9,19 @@ import DownloadButton from "@/components/DownloadButton";
 import ErrorMessage from "@/components/ErrorMessage";
 import type { VideoInfo, VideoFormat, ApiError } from "@/types/video";
 
+/* ── Progress type ────────────────────────────────── */
+
+interface DownloadProgress {
+  percent: number;
+  speed: string | null;
+  eta: string | null;
+  totalSize: string | null;
+  done: boolean;
+  error: string | null;
+  fileUrl: string | null;
+  fileName: string | null;
+}
+
 /* ── State machine ────────────────────────────────── */
 
 type PageState =
@@ -28,21 +41,43 @@ function resultState(
   return { phase: "result", info, activeExt, selectedFormat };
 }
 
-function downloadingState(
-  info: VideoInfo,
-  activeExt: string,
-  selectedFormat: VideoFormat,
-): PageState {
-  return { phase: "downloading", info, activeExt, selectedFormat };
+/* ── SSE parser ──────────────────────────────────── */
+
+async function* parseSSE(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+): AsyncGenerator<DownloadProgress, void, unknown> {
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        const json = line.slice(6);
+        try {
+          const event = JSON.parse(json) as DownloadProgress;
+          yield event;
+          if (event.done || event.error) return;
+        } catch {
+          // skip malformed lines
+        }
+      }
+    }
+  }
 }
 
 /* ── Page ────────────────────────────────────────── */
 
 export default function Home() {
   const [state, setState] = useState<PageState>({ phase: "idle" });
+  const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
 
-  /** Keep a ref to the latest result-phase data so the download handler
-   *  can read it without fighting the state machine's discriminated union. */
   const captured = useRef<{
     info: VideoInfo;
     selectedFormat: VideoFormat;
@@ -51,6 +86,7 @@ export default function Home() {
   /* ── Submit URL → fetch info ──────────────────── */
   const handleSubmit = useCallback(async (url: string) => {
     setState({ phase: "loading" });
+    setDownloadProgress(null);
 
     try {
       const res = await fetch("/api/info", {
@@ -84,6 +120,7 @@ export default function Home() {
       }
       return prev;
     });
+    setDownloadProgress(null);
   }, []);
 
   /* ── Format card click ────────────────────────── */
@@ -101,87 +138,117 @@ export default function Home() {
     });
   }, []);
 
-  /* ── Download ─────────────────────────────────── */
-  const handleDownload = useCallback(() => {
+  /* ── Download click → start download ────────────── */
+  const handleDownloadClick = useCallback(() => {
     setState((prev) => {
       if (prev.phase !== "result" || !prev.selectedFormat) return prev;
-
-      // Capture values before transitioning
       captured.current = {
         info: prev.info,
         selectedFormat: prev.selectedFormat,
       };
-
-      return downloadingState(prev.info, prev.activeExt, prev.selectedFormat);
+      return {
+        phase: "downloading",
+        info: prev.info,
+        activeExt: prev.activeExt,
+        selectedFormat: prev.selectedFormat,
+      };
     });
+    setDownloadProgress(null);
   }, []);
 
-  /** Actual async work — triggered by useEffect-style pattern.
-   *  We check `captured.current` after state transitions to "downloading". */
-  const runDownload = useCallback(async () => {
+  /* ── Run download + SSE progress ───────────────── */
+  useEffect(() => {
+    if (state.phase !== "downloading") return;
     const cap = captured.current;
     if (!cap) return;
     captured.current = null;
 
     const { info, selectedFormat } = cap;
+    let aborted = false;
 
-    try {
-      const res = await fetch("/api/download", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: `https://www.youtube.com/watch?v=${info.id}`,
-          formatId: selectedFormat.id,
-          ext: selectedFormat.ext,
-        }),
-      });
+    (async () => {
+      try {
+        // Step 1: Start download
+        const startRes = await fetch("/api/download", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url: `https://www.youtube.com/watch?v=${info.id}`,
+            formatId: selectedFormat.id,
+            ext: selectedFormat.ext,
+          }),
+        });
 
-      if (!res.ok) {
-        const error = await res.json().catch(() => null);
-        toast.error(error?.error || "Download failed. Please try again.");
-        setState(resultState(info, selectedFormat.ext, selectedFormat));
-        return;
-      }
+        if (!startRes.ok) {
+          const err = await startRes.json().catch(() => null);
+          toast.error(err?.error || "Failed to start download.");
+          setState(resultState(info, selectedFormat.ext, selectedFormat));
+          return;
+        }
 
-      // Trigger browser download via blob
-      const blob = await res.blob();
-      const disposition = res.headers.get("Content-Disposition");
-      let filename = `video.${selectedFormat.ext}`;
+        const { downloadId } = await startRes.json();
 
-      if (disposition) {
-        const match = disposition.match(/filename="?([^";\n]+)"?/);
-        if (match) {
-          filename = decodeURIComponent(match[1]);
+        // Step 2: Connect to SSE for progress
+        const progressRes = await fetch(`/api/download/progress?downloadId=${downloadId}`);
+
+        if (!progressRes.ok || !progressRes.body) {
+          toast.error("Failed to get download progress.");
+          setState(resultState(info, selectedFormat.ext, selectedFormat));
+          return;
+        }
+
+        const reader = progressRes.body.getReader();
+
+        for await (const event of parseSSE(reader)) {
+          if (aborted) break;
+          setDownloadProgress(event);
+
+          if (event.error) {
+            toast.error(event.error);
+            setState(resultState(info, selectedFormat.ext, selectedFormat));
+            return;
+          }
+
+          if (event.done && event.fileUrl) {
+            // Step 3: Download complete — fetch the file
+            toast.success("Download complete! Saving file...");
+
+            const fileRes = await fetch(event.fileUrl);
+            if (!fileRes.ok) {
+              toast.error("Failed to retrieve downloaded file.");
+              setState(resultState(info, selectedFormat.ext, null));
+              return;
+            }
+
+            const blob = await fileRes.blob();
+            const downloadUrl = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = downloadUrl;
+            a.download = event.fileName || `video.${selectedFormat.ext}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(downloadUrl);
+
+            setState(resultState(info, selectedFormat.ext, null));
+            return;
+          }
+        }
+      } catch (err) {
+        if (!aborted) {
+          toast.error("Download failed. Check your connection.");
+          setState(resultState(info, selectedFormat.ext, selectedFormat));
         }
       }
+    })();
 
-      const downloadUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(downloadUrl);
-
-      toast.success("Download started!");
-      setState(resultState(info, selectedFormat.ext, null));
-    } catch {
-      toast.error("Download failed. Check your connection and try again.");
-      setState(resultState(info, selectedFormat.ext, selectedFormat));
-    }
-  }, []);
-
-  // Trigger the async download when entering "downloading" phase
-  useEffect(() => {
-    if (state.phase === "downloading") {
-      runDownload();
-    }
-  }, [state.phase, runDownload]);
+    return () => { aborted = true; };
+  }, [state.phase]);
 
   /* ── Retry ────────────────────────────────────── */
   const handleRetry = useCallback(() => {
     setState({ phase: "idle" });
+    setDownloadProgress(null);
   }, []);
 
   /* ── Render ───────────────────────────────────── */
@@ -243,7 +310,8 @@ export default function Home() {
             <div className="animate-in fade-in slide-in-from-bottom-2">
               <DownloadButton
                 size={state.selectedFormat.size}
-                onClick={handleDownload}
+                onClick={handleDownloadClick}
+                progress={downloadProgress}
                 isLoading={state.phase === "downloading"}
               />
             </div>
