@@ -64,18 +64,29 @@ export function startDownload(
   const id = randomBytes(8).toString("hex");
 
   if (!existsSync(TEMP_DIR)) {
-    // sync mkdir is fine for startup
     const fs = require("fs");
     fs.mkdirSync(TEMP_DIR, { recursive: true });
   }
 
-  const outputPath = join(TEMP_DIR, `yt-dl-${id}.%(ext)s`);
+  // Known output filename — yt-dlp will place the merged/converted result here
+  const fileName = `yt-dl-${id}.${ext}`;
+  const outputPath = join(TEMP_DIR, fileName);
+
+  const state: ActiveDownload["state"] = {
+    percent: 0,
+    speed: null,
+    eta: null,
+    totalSize: null,
+    done: false,
+    error: null,
+    filePath: outputPath,  // known in advance
+    fileName: fileName,
+  };
 
   const args: string[] = [
     "--no-playlist",
     "-f", formatId,
     "-o", outputPath,
-    url,
   ];
 
   // MP3 conversion
@@ -88,22 +99,13 @@ export function startDownload(
     args.splice(1, 0, "--merge-output-format", "mp4");
   }
 
+  args.push(url);
+
   console.log(`[dl:${id}] Starting: yt-dlp ${args.join(" ")}`);
 
   const proc = spawn(YT_DLP, args, {
     stdio: ["ignore", "pipe", "pipe"],
   });
-
-  const state: ActiveDownload["state"] = {
-    percent: 0,
-    speed: null,
-    eta: null,
-    totalSize: null,
-    done: false,
-    error: null,
-    filePath: null,
-    fileName: null,
-  };
 
   const download: ActiveDownload = {
     id,
