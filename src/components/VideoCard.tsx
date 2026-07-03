@@ -13,6 +13,19 @@ export default function VideoCard({
   thumbnail,
   uploader,
 }: VideoCardProps) {
+  const fallbackThumbnail = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    // Try progressively lower resolutions
+    if (img.src.includes("hqdefault")) {
+      img.src = img.src.replace("hqdefault", "mqdefault");
+    } else if (img.src.includes("mqdefault")) {
+      img.src = img.src.replace("mqdefault", "default");
+    } else if (img.src.includes("default")) {
+      // Last resort — hide the broken image
+      img.style.display = "none";
+    }
+  };
+
   return (
     <div className="group relative overflow-hidden bg-[#151619] border border-white/5 w-full max-w-2xl mx-auto">
       {/* Thumbnail section */}
@@ -20,9 +33,11 @@ export default function VideoCard({
         <img
           src={thumbnail}
           alt={title}
+          onError={fallbackThumbnail}
           className="w-full h-full object-cover transition-all duration-500
             group-hover:scale-105 group-hover:brightness-50"
           loading="eager"
+          referrerPolicy="no-referrer"
         />
 
         {/* Hover overlay: YouTube link */}

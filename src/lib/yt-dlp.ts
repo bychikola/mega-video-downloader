@@ -71,9 +71,9 @@ export async function getVideoInfo(url: string): Promise<VideoInfo> {
 
   const raw: YtDlpRawInfo = JSON.parse(stdout.trim());
 
-  const thumbnail =
-    raw.thumbnail ||
-    `https://img.youtube.com/vi/${raw.id}/maxresdefault.jpg`;
+  // Build thumbnail URL from video ID — more reliable than raw.thumbnail
+  // hqdefault.jpg is 480×360 and available for every YouTube video
+  const thumbnail = `https://i.ytimg.com/vi/${raw.id}/hqdefault.jpg`;
 
   const formats: VideoFormat[] = raw.formats
     .filter((f) => f.ext && (f.vcodec !== "none" || f.acodec !== "none"))
