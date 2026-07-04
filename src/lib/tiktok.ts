@@ -100,12 +100,15 @@ export async function getTikTokDownloadData(url: string): Promise<{
   }
 
   const json: TikWmResponse = await res.json();
+  console.log("[tiktok] tikwm response code:", json.code, "has data:", !!json.data);
 
   if (json.code !== 0 || !json.data) {
+    console.error("[tiktok] tikwm error:", json.msg);
     throw new Error(json.msg || "Failed to get download URL.");
   }
 
   const cleanUrl = json.data.play; // no-watermark URL
+  console.log("[tiktok] Clean URL:", cleanUrl?.substring(0, 60) + "...");
 
   // Fetch file size if not provided
   let size = json.data.size || 0;

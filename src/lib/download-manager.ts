@@ -241,22 +241,47 @@ export function startUrlDownload(
 
   downloads.set(id, download);
 
-  const protocol = downloadUrl.startsWith("https") ? require("https") : require("http");
-  const fileStream = require("fs").createWriteStream(outputPath);
+  // Use native http/https with proper headers
+  const http = require("http") as typeof import("http");
+  const https = require("https") as typeof import("https");
+  const fs = require("fs") as typeof import("fs");
+  const urlModule = require("url") as typeof import("url");
+
+  const parsedUrl = new URL(downloadUrl);
+  const fetcher = parsedUrl.protocol === "https:" ? https : http;
+
+  const options = {
+    hostname: parsedUrl.hostname,
+    port: parsedUrl.port,
+    path: parsedUrl.pathname + parsedUrl.search,
+    method: "GET",
+    headers: {
+      "User-Agent": "Mozilla/5.0 (compatible; AllSaves/1.0)",
+      "Referer": parsedUrl.origin,
+      "Accept": "*/*",
+    },
+    timeout: 60000,
+  };
+
+  console.log(`[dl:${id}] Fetching: ${downloadUrl}`);
+
+  const fileStream = fs.createWriteStream(outputPath);
 
   let loaded = 0;
-  let startTime = Date.now();
   let lastUpdate = Date.now();
   let lastLoaded = 0;
+  let contentLength = totalBytes;
 
-  protocol.get(downloadUrl, (res: any) => {
+  const req = fetcher.request(options, (res: any) => {
+    console.log(`[dl:${id}] Response: ${res.statusCode}`);
+
     // Handle redirects
     if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
       fileStream.close();
       downloads.delete(id);
-      // Recurse with the redirect URL
-      const newId = startUrlDownload(res.headers.location, fileName, totalBytes);
-      // Remap subscribers to the new download
+      const redirectUrl = new URL(res.headers.location, downloadUrl).href;
+      console.log(`[dl:${id}] Redirecting to: ${redirectUrl}`);
+      const newId = startUrlDownload(redirectUrl, fileName, totalBytes);
       const newDl = downloads.get(newId);
       if (newDl) {
         newDl.subscribers.push(...download.subscribers);
@@ -265,63 +290,83 @@ export function startUrlDownload(
     }
 
     if (res.statusCode !== 200) {
-      state.error = `Download failed (HTTP ${res.statusCode})`;
+      fileStream.close();
+      state.error = `Server returned ${res.statusCode}`;
       broadcast(id, buildEvent(download));
       return;
     }
 
-    const contentLength = parseInt(res.headers["content-length"] || "0", 10);
-    if (contentLength > 0 && !totalBytes) {
-      state.totalSize = formatBytesForState(contentLength);
+    if (!contentLength) {
+      const cl = parseInt(res.headers["content-length"] || "0", 10);
+      if (cl > 0) {
+        contentLength = cl;
+        state.totalSize = formatBytesForState(cl);
+      }
     }
 
     res.on("data", (chunk: Buffer) => {
       loaded += chunk.length;
       state.percent = contentLength > 0
         ? Math.round((loaded / contentLength) * 100)
-        : Math.min(Math.round((loaded / (totalBytes || 10 * 1024 * 1024)) * 100), 99);
+        : Math.min(Math.round((loaded / (10 * 1024 * 1024)) * 100), 99);
 
       const now = Date.now();
-      if (now - lastUpdate > 200) {
-        const timeDelta = (now - lastUpdate) / 1000;
+      if (now - lastUpdate > 250) {
+        const timeDelta = Math.max((now - lastUpdate) / 1000, 0.1);
         const bytesDelta = loaded - lastLoaded;
         const speedBps = bytesDelta / timeDelta;
         state.speed = formatSpeed(speedBps);
-        state.eta = contentLength > 0
-          ? formatEta((contentLength - loaded) / speedBps)
-          : null;
-
+        if (contentLength > 0) {
+          state.eta = formatEta((contentLength - loaded) / Math.max(speedBps, 1));
+        }
         lastUpdate = now;
         lastLoaded = loaded;
         broadcast(id, buildEvent(download));
       }
-
-      fileStream.write(chunk);
     });
 
-    res.on("end", () => {
-      fileStream.end();
+    res.pipe(fileStream);
+
+    fileStream.on("finish", () => {
       state.done = true;
       state.percent = 100;
       state.speed = null;
       state.eta = null;
       broadcast(id, buildEvent(download));
+      console.log(`[dl:${id}] Complete: ${outputPath}`);
 
       download.timeout = setTimeout(() => {
         cleanup(id);
       }, CLEANUP_AFTER_MS);
     });
 
-    res.on("error", (err: Error) => {
-      fileStream.close();
-      state.error = `Download error: ${err.message}`;
+    fileStream.on("error", (err: Error) => {
+      state.error = `Write error: ${err.message}`;
       broadcast(id, buildEvent(download));
     });
-  }).on("error", (err: Error) => {
+
+    res.on("error", (err: Error) => {
+      fileStream.close();
+      state.error = `Stream error: ${err.message}`;
+      broadcast(id, buildEvent(download));
+    });
+  });
+
+  req.on("error", (err: Error) => {
+    console.error(`[dl:${id}] Request error:`, err.message);
     fileStream.close();
     state.error = `Connection error: ${err.message}`;
     broadcast(id, buildEvent(download));
   });
+
+  req.on("timeout", () => {
+    req.destroy();
+    fileStream.close();
+    state.error = "Download timed out";
+    broadcast(id, buildEvent(download));
+  });
+
+  req.end();
 
   return id;
 }
