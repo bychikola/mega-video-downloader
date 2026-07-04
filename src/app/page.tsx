@@ -298,10 +298,10 @@ export default function Home() {
       {/* Header */}
       <div className="text-center mb-12 space-y-3">
         <h1 className="text-3xl sm:text-4xl font-bold text-[#F0EFEA] tracking-tight font-sans">
-          YouTube Downloader
+          AllSaves
         </h1>
         <p className="text-sm text-[#5D5C59] font-sans max-w-sm mx-auto">
-          Paste a link, pick a format, download. No ads, no waiting.
+          Save videos from YouTube, VK, TikTok, Instagram and more. Fast, free, no limits.
         </p>
       </div>
 

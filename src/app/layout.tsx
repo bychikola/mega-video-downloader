@@ -14,10 +14,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "YouTube Downloader — Download videos in any quality",
+  title: "AllSaves — Download videos from YouTube, VK, TikTok, Instagram",
   description:
-    "Free YouTube video downloader. Paste a link, choose quality and format — MP4, MP3, WebM. No ads, no limits.",
-  keywords: ["youtube", "download", "video", "mp4", "mp3", "webm", "free"],
+    "Free video downloader. Save videos from YouTube, VK, TikTok, Instagram and more. Choose quality and format — MP4, MP3, WebM. No ads.",
+  keywords: ["video", "download", "youtube", "vk", "tiktok", "instagram", "mp4", "mp3", "free"],
 };
 
 export default function RootLayout({
