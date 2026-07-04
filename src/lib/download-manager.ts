@@ -126,11 +126,15 @@ export function startDownload(
   proc.stderr?.on("data", (chunk: Buffer) => {
     stderrBuf += chunk.toString();
 
-    // Parse progress lines
-    const lines = stderrBuf.split("\n");
-    stderrBuf = lines.pop() || ""; // Keep incomplete line
+    // ffmpeg uses \r (carriage return) to overwrite progress lines.
+    // Normalize all line endings to \n, then split.
+    const normalized = stderrBuf.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    const lines = normalized.split("\n");
+    stderrBuf = lines.pop() || ""; // Keep incomplete line, with original \r
 
     for (const line of lines) {
+      // Skip empty/whitespace-only lines
+      if (!line.trim()) continue;
       // yt-dlp native progress: "[download] 12.3% of ..."
       const match = line.match(PROGRESS_RE);
       if (match) {

@@ -104,7 +104,10 @@ export async function getVideoInfo(url: string): Promise<VideoInfo> {
       const hasVideo = !!(f.vcodec && f.vcodec !== "none");
       const hasAudio = !!(f.acodec && f.acodec !== "none");
 
-      // Build quality label from best available info
+      // HLS/fmp4 streams typically have muxed audio even if acodec is "none"
+      const isHls = f.format_id?.includes("hls") || f.format_id?.includes("fmp4");
+      const effectiveHasAudio = hasAudio || isHls;
+      const effectiveHasVideo = hasVideo;
       let quality = f.format_note || "";
       if (!quality && f.height) {
         quality = `${f.height}p`;
@@ -113,17 +116,17 @@ export async function getVideoInfo(url: string): Promise<VideoInfo> {
       }
       if (!quality || quality === "Unknown" || quality === "unknown") {
         if (f.height) quality = `${f.height}p`;
-        else if (hasVideo) quality = f.resolution || "video";
+        else if (effectiveHasVideo) quality = f.resolution || "video";
         else quality = "audio only";
       }
-      if (!hasVideo && hasAudio && !quality.includes("audio")) {
+      if (!effectiveHasVideo && effectiveHasAudio && !quality.includes("audio")) {
         quality = "audio only";
       }
 
       const noteParts: string[] = [];
-      if (hasVideo && hasAudio) noteParts.push("video + audio");
-      else if (hasVideo) noteParts.push("video only");
-      else if (hasAudio) noteParts.push("audio only");
+      if (effectiveHasVideo && effectiveHasAudio) noteParts.push("video + audio");
+      else if (effectiveHasVideo) noteParts.push("video only");
+      else if (effectiveHasAudio) noteParts.push("audio only");
 
       return {
         id: f.format_id,
@@ -132,8 +135,8 @@ export async function getVideoInfo(url: string): Promise<VideoInfo> {
         size: size.text,
         sizeBytes: size.bytes,
         note: noteParts.join(", "),
-        hasVideo,
-        hasAudio,
+        hasVideo: effectiveHasVideo,
+        hasAudio: effectiveHasAudio,
       };
     });
 
