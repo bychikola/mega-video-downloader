@@ -13,21 +13,28 @@ interface YtDlpRawFormat {
   format_id: string;
   ext: string;
   resolution?: string;
+  width?: number;
+  height?: number;
   filesize?: number;
   filesize_approx?: number;
   vcodec?: string;
   acodec?: string;
   format_note?: string;
   tbr?: number;
+  fps?: number;
 }
 
 interface YtDlpRawInfo {
   id: string;
   title: string;
   duration: number;
-  thumbnail: string;
-  uploader: string;
+  thumbnail?: string;
+  thumbnails?: Array<{ url: string; id?: string }>;
+  uploader?: string;
+  uploader_id?: string;
+  channel?: string;
   formats: YtDlpRawFormat[];
+  webpage_url?: string;
 }
 
 function parseDuration(seconds: number): string {
@@ -71,21 +78,45 @@ export async function getVideoInfo(url: string): Promise<VideoInfo> {
 
   const raw: YtDlpRawInfo = JSON.parse(stdout.trim());
 
-  // Build thumbnail URL from video ID — more reliable than raw.thumbnail
-  // hqdefault.jpg is 480×360 and available for every YouTube video
-  const thumbnail = `https://i.ytimg.com/vi/${raw.id}/hqdefault.jpg`;
+  // ── Thumbnail: try multiple sources ──────────────
+  let thumbnail =
+    raw.thumbnail ||
+    raw.thumbnails?.[0]?.url ||
+    raw.thumbnails?.[raw.thumbnails.length - 1]?.url ||
+    "";
+
+  // If still empty, try YouTube fallback by ID format
+  if (!thumbnail && /^[\w-]{11}$/.test(raw.id)) {
+    thumbnail = `https://i.ytimg.com/vi/${raw.id}/hqdefault.jpg`;
+  }
+
+  // ── Formats ──────────────────────────────────────
+  const totalDuration = raw.duration || 0;
 
   const formats: VideoFormat[] = raw.formats
     .filter((f) => f.ext && (f.vcodec !== "none" || f.acodec !== "none"))
     .map((f) => {
-      const size = formatSize(f.filesize || f.filesize_approx);
+      // Estimate size from bitrate * duration if filesize is missing
+      let fileBytes = f.filesize || f.filesize_approx || 0;
+      if (!fileBytes && f.tbr && totalDuration) {
+        fileBytes = Math.round((f.tbr * 1000 * totalDuration) / 8);
+      }
+      const size = formatSize(fileBytes);
+
       const hasVideo = !!(f.vcodec && f.vcodec !== "none");
       const hasAudio = !!(f.acodec && f.acodec !== "none");
 
-      let quality = f.format_note || f.resolution || "unknown";
-      // Normalize quality labels
-      if (quality === "Unknown" || quality === "unknown") {
-        quality = hasVideo ? (f.resolution || "video") : "audio only";
+      // Build quality label from best available info
+      let quality = f.format_note || "";
+      if (!quality && f.height) {
+        quality = `${f.height}p`;
+      } else if (!quality && f.resolution) {
+        quality = f.resolution;
+      }
+      if (!quality || quality === "Unknown" || quality === "unknown") {
+        if (f.height) quality = `${f.height}p`;
+        else if (hasVideo) quality = f.resolution || "video";
+        else quality = "audio only";
       }
       if (!hasVideo && hasAudio && !quality.includes("audio")) {
         quality = "audio only";
@@ -117,7 +148,7 @@ export async function getVideoInfo(url: string): Promise<VideoInfo> {
     duration: parseDuration(raw.duration),
     durationSeconds: raw.duration,
     thumbnail,
-    uploader: raw.uploader,
+    uploader: raw.uploader || raw.uploader_id || raw.channel || "",
     formats: filtered,
   };
 }
