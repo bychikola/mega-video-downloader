@@ -44,6 +44,8 @@ export interface DownloadRequest {
   url: string;
   formatId: string;
   ext: string;
+  /** Video duration in seconds — used for ffmpeg/HLS progress calculation */
+  durationSeconds?: number;
 }
 
 export interface ApiError {

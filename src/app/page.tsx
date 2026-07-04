@@ -179,6 +179,7 @@ export default function Home() {
             url: info.originalUrl,
             formatId: selectedFormat.id,
             ext: selectedFormat.ext,
+            durationSeconds: info.durationSeconds,
           }),
         });
 

@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const downloadId = startDownload(url, body.formatId, body.ext);
+    const downloadId = startDownload(url, body.formatId, body.ext, body.durationSeconds);
     return NextResponse.json({ downloadId });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Download failed";

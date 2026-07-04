@@ -43,9 +43,12 @@ const downloads = new Map<string, ActiveDownload>();
 const CLEANUP_AFTER_MS = 5 * 60 * 1000;
 
 // ── Progress regex ──────────────────────────────────────────
-// Matches: "[download]  12.3% of  156.00MiB at    5.2MiB/s ETA 00:28"
-// Matches: "[download] 100% of  156.00MiB in 00:45"
+// yt-dlp native: "[download]  12.3% of  156.00MiB at    5.2MiB/s ETA 00:28"
 const PROGRESS_RE = /\[download\]\s+(\d+\.?\d*)%\s+of\s+~?\s?(\S+)\s+(?:at\s+(\S+)\s+ETA\s+(\S+)|in\s+(\S+))/;
+
+// ffmpeg progress (for HLS/VK): "frame=  150 fps= 30 ... time=00:00:05.00 bitrate=..."
+const FFMPEG_TIME_RE = /time=(\d+):(\d+):(\d+)\.(\d+)/;
+const FFMPEG_SPEED_RE = /speed=\s*(\S+)x/;
 
 // Matches: "[ExtractAudio] Destination: /path/file.mp3"
 // Matches: "[Merger] Merging formats into /path/file.mp4"
@@ -59,7 +62,8 @@ const DEST_RE = /Destination:\s*(.+)/;
 export function startDownload(
   url: string,
   formatId: string,
-  ext: string
+  ext: string,
+  durationSeconds?: number
 ): string {
   const id = randomBytes(8).toString("hex");
 
@@ -127,7 +131,7 @@ export function startDownload(
     stderrBuf = lines.pop() || ""; // Keep incomplete line
 
     for (const line of lines) {
-      // Progress line
+      // yt-dlp native progress: "[download] 12.3% of ..."
       const match = line.match(PROGRESS_RE);
       if (match) {
         const percent = parseFloat(match[1]);
@@ -136,7 +140,26 @@ export function startDownload(
         state.speed = match[3] || null;
         state.eta = match[4] || null;
 
-        // Broadcast progress
+        broadcast(id, buildEvent(download));
+        continue;
+      }
+
+      // ffmpeg progress (HLS/VK): "frame=... time=00:00:05.00 ... speed=5.0x"
+      const ffmpegMatch = line.match(FFMPEG_TIME_RE);
+      if (ffmpegMatch && durationSeconds && durationSeconds > 0) {
+        const h = parseInt(ffmpegMatch[1], 10);
+        const m = parseInt(ffmpegMatch[2], 10);
+        const s = parseInt(ffmpegMatch[3], 10);
+        const ms = parseInt(ffmpegMatch[4], 10);
+        const currentTime = h * 3600 + m * 60 + s + ms / 100;
+        const percent = Math.min(Math.round((currentTime / durationSeconds) * 100), 99);
+        state.percent = percent;
+
+        const speedMatch = line.match(FFMPEG_SPEED_RE);
+        if (speedMatch) {
+          state.speed = `${speedMatch[1]}x`;
+        }
+
         broadcast(id, buildEvent(download));
         continue;
       }
