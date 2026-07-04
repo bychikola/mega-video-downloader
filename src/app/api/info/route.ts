@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getVideoInfo, isValidYoutubeUrl } from "@/lib/yt-dlp";
+import { getVideoInfo, isValidYoutubeUrl, isValidVkUrl } from "@/lib/yt-dlp";
 import { getTikTokInfo, isTikTokUrl } from "@/lib/tiktok";
 import type { InfoRequest } from "@/types/video";
 
@@ -22,30 +22,26 @@ export async function POST(request: Request) {
       return NextResponse.json(info);
     }
 
-    // ── YouTube ─────────────────────────────────────
-    if (!isValidYoutubeUrl(url)) {
-      return NextResponse.json(
-        {
-          error: "This doesn't look like a supported link. Currently we support YouTube and TikTok.",
-          code: "INVALID_URL",
-        },
-        { status: 400 }
-      );
+    // ── VK / YouTube ────────────────────────────────
+    if (isValidVkUrl(url) || isValidYoutubeUrl(url)) {
+      const info = await getVideoInfo(url);
+      if (!info.formats.length) {
+        return NextResponse.json(
+          { error: "No downloadable formats found.", code: "VIDEO_UNAVAILABLE" },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json(info);
     }
 
-    const info = await getVideoInfo(url);
-
-    if (!info.formats.length) {
-      return NextResponse.json(
-        {
-          error: "No downloadable formats found for this video.",
-          code: "VIDEO_UNAVAILABLE",
-        },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(info);
+    // ── Unknown ─────────────────────────────────────
+    return NextResponse.json(
+      {
+        error: "Unsupported link. We currently support YouTube, TikTok, and VK.",
+        code: "INVALID_URL",
+      },
+      { status: 400 }
+    );
   } catch (err: unknown) {
     const message =
       err instanceof Error ? err.message : "Failed to fetch video info";

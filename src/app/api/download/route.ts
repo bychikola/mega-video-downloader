@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isValidYoutubeUrl } from "@/lib/yt-dlp";
+import { isValidYoutubeUrl, isValidVkUrl } from "@/lib/yt-dlp";
 import { isTikTokUrl, getTikTokDownloadData } from "@/lib/tiktok";
 import { startDownload, startUrlDownload } from "@/lib/download-manager";
 import type { DownloadRequest } from "@/types/video";
@@ -24,10 +24,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ downloadId });
     }
 
-    // ── YouTube ─────────────────────────────────────
-    if (!isValidYoutubeUrl(url)) {
+    // ── YouTube / VK ────────────────────────────────
+    if (!isValidYoutubeUrl(url) && !isValidVkUrl(url)) {
       return NextResponse.json(
-        { error: "Unsupported URL. Currently we support YouTube and TikTok.", code: "INVALID_URL" },
+        { error: "Unsupported URL. We support YouTube, TikTok, and VK.", code: "INVALID_URL" },
         { status: 400 }
       );
     }

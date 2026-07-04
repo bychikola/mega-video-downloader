@@ -9,7 +9,7 @@ interface VideoInputProps {
 }
 
 const SUPPORTED_REGEX =
-  /(?:https?:\/\/)?(?:www\.|m\.)?youtube\.com\/watch\?.*v=[\w-]+|(?:https?:\/\/)?(?:www\.|m\.)?youtube\.com\/shorts\/[\w-]+|(?:https?:\/\/)?youtu\.be\/[\w-]+|(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/[\w-]+|(?:https?:\/\/)?(?:www\.|vm\.|vt\.)?tiktok\.com\/@?[\w.-]+\/(?:video\/\d+|t\/[\w-]+)[\w\/-]*/i;
+  /(?:https?:\/\/)?(?:www\.|m\.)?youtube\.com\/watch\?.*v=[\w-]+|(?:https?:\/\/)?(?:www\.|m\.)?youtube\.com\/shorts\/[\w-]+|(?:https?:\/\/)?youtu\.be\/[\w-]+|(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/[\w-]+|(?:https?:\/\/)?(?:www\.|vm\.|vt\.)?tiktok\.com\/@?[\w.-]+\/(?:video\/\d+|t\/[\w-]+)[\w\/-]*|(?:https?:\/\/)?(?:www\.|m\.)?vk\.com\/video[-\w?&=_]+|(?:https?:\/\/)?(?:www\.)?vkvideo\.ru\/video[-\w?&=_]+/i;
 
 function isValidUrl(url: string): boolean {
   return SUPPORTED_REGEX.test(url.trim());
@@ -67,7 +67,7 @@ export default function VideoInput({ onSubmit, isLoading }: VideoInputProps) {
               if (touched) setTouched(false);
             }}
             onBlur={() => setTouched(true)}
-            placeholder="Paste a YouTube or TikTok link..."
+            placeholder="Paste a link (YouTube, TikTok, VK)..."
             disabled={isLoading}
             autoFocus
             className="

@@ -149,6 +149,19 @@ export function buildDownloadArgs(
 }
 
 /**
+ * Validate a VK video URL format.
+ * Supports: vk.com/video-XXX_XXX, vk.com/video?z=video-XXX_XXX, vkvideo.ru
+ */
+export function isValidVkUrl(url: string): boolean {
+  const patterns = [
+    /(?:https?:\/\/)?(?:www\.|m\.)?vk\.com\/video-?\d*_?\d+/i,
+    /(?:https?:\/\/)?(?:www\.)?vk\.com\/video\?z=video-?\d*_?\d+/i,
+    /(?:https?:\/\/)?(?:www\.)?vkvideo\.ru\/video-?\d*_?\d+/i,
+  ];
+  return patterns.some((p) => p.test(url));
+}
+
+/**
  * Validate a YouTube URL format.
  * Supports: youtube.com/watch?v=, youtu.be/, m.youtube.com/, youtube.com/shorts/
  */

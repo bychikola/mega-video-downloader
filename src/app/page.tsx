@@ -301,7 +301,7 @@ export default function Home() {
           AllSaves
         </h1>
         <p className="text-sm text-[#5D5C59] font-sans max-w-sm mx-auto">
-          Save videos from YouTube, VK, TikTok, Instagram and more. Fast, free, no limits.
+          Save videos from YouTube, TikTok, VK and more. Fast, free, no limits.
         </p>
       </div>
 
