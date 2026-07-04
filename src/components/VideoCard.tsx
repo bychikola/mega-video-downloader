@@ -5,6 +5,7 @@ interface VideoCardProps {
   duration: string;
   thumbnail: string;
   uploader: string;
+  originalUrl: string;
 }
 
 export default function VideoCard({
@@ -12,6 +13,7 @@ export default function VideoCard({
   duration,
   thumbnail,
   uploader,
+  originalUrl,
 }: VideoCardProps) {
   const fallbackThumbnail = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
@@ -43,9 +45,9 @@ export default function VideoCard({
           }}
         />
 
-        {/* Hover overlay: YouTube link */}
+        {/* Hover overlay: open original link */}
         <a
-          href={`https://www.youtube.com/watch?v=${extractVideoId(thumbnail)}`}
+          href={originalUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="
@@ -100,8 +102,3 @@ export default function VideoCard({
   );
 }
 
-/** Extract video ID from thumbnail URL as fallback */
-function extractVideoId(thumbnail: string): string {
-  const match = thumbnail.match(/\/vi\/([\w-]+)\//);
-  return match ? match[1] : "";
-}

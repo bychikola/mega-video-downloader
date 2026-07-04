@@ -18,8 +18,10 @@ export interface VideoFormat {
 }
 
 export interface VideoInfo {
-  /** YouTube video ID */
+  /** Video ID (YouTube or TikTok) */
   id: string;
+  /** Original URL passed by the user */
+  originalUrl: string;
   /** Video title */
   title: string;
   /** Formatted duration (e.g. "12:34") */

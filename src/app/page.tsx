@@ -176,7 +176,7 @@ export default function Home() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            url: `https://www.youtube.com/watch?v=${info.id}`,
+            url: info.originalUrl,
             formatId: selectedFormat.id,
             ext: selectedFormat.ext,
           }),
@@ -337,6 +337,7 @@ export default function Home() {
             duration={state.info.duration}
             thumbnail={state.info.thumbnail}
             uploader={state.info.uploader}
+            originalUrl={state.info.originalUrl}
           />
 
           <FormatSelector

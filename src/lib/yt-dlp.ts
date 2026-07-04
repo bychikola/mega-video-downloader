@@ -112,6 +112,7 @@ export async function getVideoInfo(url: string): Promise<VideoInfo> {
 
   return {
     id: raw.id,
+    originalUrl: url,
     title: raw.title,
     duration: parseDuration(raw.duration),
     durationSeconds: raw.duration,

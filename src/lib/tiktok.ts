@@ -70,6 +70,7 @@ export async function getTikTokInfo(url: string): Promise<VideoInfo> {
 
   return {
     id: data.id || extractId(url),
+    originalUrl: url,
     title: data.title || "TikTok video",
     duration: formatDuration(data.duration || 0),
     durationSeconds: data.duration || 0,
