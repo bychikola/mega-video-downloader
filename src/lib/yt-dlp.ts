@@ -69,8 +69,6 @@ export async function getVideoInfo(url: string): Promise<VideoInfo> {
     [
       "--dump-json",
       "--no-playlist",
-      "--flat-playlist",
-      "--no-check-formats",
       url,
     ],
     { timeout: INFO_TIMEOUT, maxBuffer: 10 * 1024 * 1024 }

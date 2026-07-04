@@ -45,7 +45,7 @@ export default function DownloadButton({
 
   const isSave = progress?.phase === "save";
   const barColor = isSave ? "bg-green-500" : "bg-red-500";
-  const label = isSave ? "Saving to device..." : "Downloading from YouTube...";
+  const label = isSave ? "Saving to device..." : "Downloading...";
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-3">
@@ -57,7 +57,11 @@ export default function DownloadButton({
         {/* Percent + stats */}
         <div className="flex items-center justify-between mb-2">
           <span className="text-lg font-mono text-[#F0EFEA] tabular-nums font-semibold">
-            {progress ? `${Math.round(progress.percent)}%` : "..."}
+            {progress
+              ? progress.percent === 0 && !isSave
+                ? "Starting"
+                : `${Math.round(progress.percent)}%`
+              : "..."}
           </span>
           <div className="flex items-center gap-4 text-xs font-mono text-[#5D5C59] tabular-nums">
             {progress?.speed && <span>{progress.speed}</span>}

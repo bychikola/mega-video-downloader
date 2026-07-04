@@ -148,6 +148,18 @@ export function startDownload(
         const parts = state.filePath.split(/[/\\]/);
         state.fileName = parts[parts.length - 1] || `video.${ext}`;
         console.log(`[dl:${id}] Destination: ${state.filePath}`);
+        // Show activity even without percentage
+        if (state.percent === 0) {
+          state.percent = 1;
+          broadcast(id, buildEvent(download));
+        }
+        continue;
+      }
+
+      // Any other download-related line — show activity
+      if (state.percent === 0 && /\[(download|ExtractAudio|Merger|ffmpeg)\]/i.test(line)) {
+        state.percent = 1;
+        broadcast(id, buildEvent(download));
       }
     }
   });
