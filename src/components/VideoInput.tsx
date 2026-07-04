@@ -8,11 +8,11 @@ interface VideoInputProps {
   isLoading: boolean;
 }
 
-const YOUTUBE_REGEX =
-  /(?:https?:\/\/)?(?:www\.|m\.)?youtube\.com\/watch\?.*v=[\w-]+|(?:https?:\/\/)?(?:www\.|m\.)?youtube\.com\/shorts\/[\w-]+|(?:https?:\/\/)?youtu\.be\/[\w-]+|(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/[\w-]+/i;
+const SUPPORTED_REGEX =
+  /(?:https?:\/\/)?(?:www\.|m\.)?youtube\.com\/watch\?.*v=[\w-]+|(?:https?:\/\/)?(?:www\.|m\.)?youtube\.com\/shorts\/[\w-]+|(?:https?:\/\/)?youtu\.be\/[\w-]+|(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/[\w-]+|(?:https?:\/\/)?(?:www\.|vm\.|vt\.)?tiktok\.com\/@?[\w.-]+\/(?:video\/\d+|t\/[\w-]+)[\w\/-]*/i;
 
 function isValidUrl(url: string): boolean {
-  return YOUTUBE_REGEX.test(url.trim());
+  return SUPPORTED_REGEX.test(url.trim());
 }
 
 export default function VideoInput({ onSubmit, isLoading }: VideoInputProps) {
@@ -67,7 +67,7 @@ export default function VideoInput({ onSubmit, isLoading }: VideoInputProps) {
               if (touched) setTouched(false);
             }}
             onBlur={() => setTouched(true)}
-            placeholder="Paste a YouTube link..."
+            placeholder="Paste a YouTube or TikTok link..."
             disabled={isLoading}
             autoFocus
             className="

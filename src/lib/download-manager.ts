@@ -204,6 +204,129 @@ export function startDownload(
 }
 
 /**
+ * Start a download from a direct URL (for TikTok and other non-yt-dlp sources).
+ * Uses Node.js https to download and track progress.
+ */
+export function startUrlDownload(
+  downloadUrl: string,
+  fileName: string,
+  totalBytes: number
+): string {
+  const id = randomBytes(8).toString("hex");
+
+  if (!existsSync(TEMP_DIR)) {
+    const fs = require("fs");
+    fs.mkdirSync(TEMP_DIR, { recursive: true });
+  }
+
+  const outputPath = join(TEMP_DIR, `dl-${id}-${fileName}`);
+  const state: ActiveDownload["state"] = {
+    percent: 0,
+    speed: null,
+    eta: null,
+    totalSize: formatBytesForState(totalBytes),
+    done: false,
+    error: null,
+    filePath: outputPath,
+    fileName: fileName,
+  };
+
+  const download: ActiveDownload = {
+    id,
+    proc: null as unknown as ChildProcess, // not using child process
+    state,
+    subscribers: [],
+    timeout: null,
+  };
+
+  downloads.set(id, download);
+
+  const protocol = downloadUrl.startsWith("https") ? require("https") : require("http");
+  const fileStream = require("fs").createWriteStream(outputPath);
+
+  let loaded = 0;
+  let startTime = Date.now();
+  let lastUpdate = Date.now();
+  let lastLoaded = 0;
+
+  protocol.get(downloadUrl, (res: any) => {
+    // Handle redirects
+    if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+      fileStream.close();
+      downloads.delete(id);
+      // Recurse with the redirect URL
+      const newId = startUrlDownload(res.headers.location, fileName, totalBytes);
+      // Remap subscribers to the new download
+      const newDl = downloads.get(newId);
+      if (newDl) {
+        newDl.subscribers.push(...download.subscribers);
+      }
+      return;
+    }
+
+    if (res.statusCode !== 200) {
+      state.error = `Download failed (HTTP ${res.statusCode})`;
+      broadcast(id, buildEvent(download));
+      return;
+    }
+
+    const contentLength = parseInt(res.headers["content-length"] || "0", 10);
+    if (contentLength > 0 && !totalBytes) {
+      state.totalSize = formatBytesForState(contentLength);
+    }
+
+    res.on("data", (chunk: Buffer) => {
+      loaded += chunk.length;
+      state.percent = contentLength > 0
+        ? Math.round((loaded / contentLength) * 100)
+        : Math.min(Math.round((loaded / (totalBytes || 10 * 1024 * 1024)) * 100), 99);
+
+      const now = Date.now();
+      if (now - lastUpdate > 200) {
+        const timeDelta = (now - lastUpdate) / 1000;
+        const bytesDelta = loaded - lastLoaded;
+        const speedBps = bytesDelta / timeDelta;
+        state.speed = formatSpeed(speedBps);
+        state.eta = contentLength > 0
+          ? formatEta((contentLength - loaded) / speedBps)
+          : null;
+
+        lastUpdate = now;
+        lastLoaded = loaded;
+        broadcast(id, buildEvent(download));
+      }
+
+      fileStream.write(chunk);
+    });
+
+    res.on("end", () => {
+      fileStream.end();
+      state.done = true;
+      state.percent = 100;
+      state.speed = null;
+      state.eta = null;
+      broadcast(id, buildEvent(download));
+
+      download.timeout = setTimeout(() => {
+        cleanup(id);
+      }, CLEANUP_AFTER_MS);
+    });
+
+    res.on("error", (err: Error) => {
+      fileStream.close();
+      state.error = `Download error: ${err.message}`;
+      broadcast(id, buildEvent(download));
+    });
+  }).on("error", (err: Error) => {
+    fileStream.close();
+    state.error = `Connection error: ${err.message}`;
+    broadcast(id, buildEvent(download));
+  });
+
+  return id;
+}
+
+/**
  * Subscribe to download progress events.
  * Returns an async generator that yields ProgressEvent objects.
  */
@@ -277,6 +400,31 @@ export function getFilePath(downloadId: string): string | null {
 export function getFileName(downloadId: string): string | null {
   const dl = downloads.get(downloadId);
   return dl?.state.fileName || null;
+}
+
+// ── Formatting helpers ──────────────────────────────────────
+
+function formatBytesForState(bytes: number): string | null {
+  if (!bytes || bytes <= 0) return null;
+  const mb = bytes / (1024 * 1024);
+  if (mb >= 1000) return `${(mb / 1024).toFixed(1)} GB`;
+  return `${Math.round(mb)} MB`;
+}
+
+function formatSpeed(bytesPerSecond: number): string {
+  if (bytesPerSecond <= 0) return "";
+  const mbps = bytesPerSecond / (1024 * 1024);
+  if (mbps >= 1) return `${mbps.toFixed(1)} MB/s`;
+  const kbps = bytesPerSecond / 1024;
+  return `${Math.round(kbps)} KB/s`;
+}
+
+function formatEta(seconds: number): string {
+  if (seconds <= 0 || !isFinite(seconds)) return "";
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 // ── Internal helpers ────────────────────────────────────────

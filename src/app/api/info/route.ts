@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getVideoInfo, isValidYoutubeUrl } from "@/lib/yt-dlp";
+import { getTikTokInfo, isTikTokUrl } from "@/lib/tiktok";
 import type { InfoRequest } from "@/types/video";
 
 export async function POST(request: Request) {
@@ -15,10 +16,17 @@ export async function POST(request: Request) {
 
     const url = body.url.trim();
 
+    // ── TikTok ──────────────────────────────────────
+    if (isTikTokUrl(url)) {
+      const info = await getTikTokInfo(url);
+      return NextResponse.json(info);
+    }
+
+    // ── YouTube ─────────────────────────────────────
     if (!isValidYoutubeUrl(url)) {
       return NextResponse.json(
         {
-          error: "This doesn't look like a YouTube link. Please check the URL and try again.",
+          error: "This doesn't look like a supported link. Currently we support YouTube and TikTok.",
           code: "INVALID_URL",
         },
         { status: 400 }
@@ -42,7 +50,6 @@ export async function POST(request: Request) {
     const message =
       err instanceof Error ? err.message : "Failed to fetch video info";
 
-    // yt-dlp specific error detection
     if (message.includes("Video unavailable") || message.includes("Private video")) {
       return NextResponse.json(
         {
@@ -56,7 +63,7 @@ export async function POST(request: Request) {
     if (message.includes("HTTP Error 429")) {
       return NextResponse.json(
         {
-          error: "YouTube is rate-limiting requests. Please try again in a few minutes.",
+          error: "Rate-limited. Please try again in a few minutes.",
           code: "RATE_LIMITED",
         },
         { status: 429 }
@@ -65,7 +72,7 @@ export async function POST(request: Request) {
 
     console.error("[api/info] Error:", message);
     return NextResponse.json(
-      { error: "Failed to fetch video information. Please try again.", code: "SERVER_ERROR" },
+      { error: message || "Failed to fetch video information.", code: "SERVER_ERROR" },
       { status: 500 }
     );
   }
